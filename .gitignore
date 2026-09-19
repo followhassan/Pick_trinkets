@@ -1,0 +1,8 @@
+config.php
+.DS_Store
+Thumbs.db
+*.log
+public/uploads/
+.idea/
+.vscode/
+agent-tools/

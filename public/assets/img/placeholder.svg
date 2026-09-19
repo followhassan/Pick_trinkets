@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#FADCE3"/>
+  <circle cx="300" cy="280" r="90" fill="#FFF8F4"/>
+  <text x="300" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#E07A96">Pick Trinkets</text>
+</svg>
