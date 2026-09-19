@@ -1,0 +1,9 @@
+/config.php
+/public/uploads/*
+!/public/uploads/.gitkeep
+.DS_Store
+Thumbs.db
+*.log
+/vendor/
+/.idea/
+/.vscode/
