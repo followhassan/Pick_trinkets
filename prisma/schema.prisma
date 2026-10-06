@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("categories")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  description String      @db.Text
+  price       Decimal     @db.Decimal(10, 2)
+  stock       Int         @default(0)
+  available   Boolean     @default(true)
+  featured    Boolean     @default(false)
+  imageUrl    String      @map("image_url") @db.Text
+  categoryId  String      @map("category_id")
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@map("products")
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  code         String      @unique
+  customerName String      @map("customer_name")
+  phone        String
+  address      String      @db.Text
+  area         String
+  note         String?     @db.Text
+  status       OrderStatus @default(NEW)
+  total        Decimal     @db.Decimal(10, 2)
+  items        OrderItem[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String   @map("order_id")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?  @map("product_id")
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String   @map("product_name")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  quantity    Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  DONE
+}
