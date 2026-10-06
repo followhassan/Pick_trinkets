@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-pink: #f06bb4;
+  --color-pink-deep: #ec5fa8;
+  --color-ink: #111111;
+  --color-cream: #f5f1ec;
+  --color-muted: #6b6166;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: #f5f1ec;
+  color: #111111;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: #f8c6e2;
+}
+
+:focus-visible {
+  outline: 2px solid #f06bb4;
+  outline-offset: 2px;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+}
