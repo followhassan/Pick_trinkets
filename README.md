@@ -10,12 +10,15 @@ The old PHP + MySQL shop is in git history. This repository is a Next.js app tha
 
 ## Pages
 
-- `/` home
-- `/shop` catalog, category filters, and search
-- `/product/[slug]` product detail
+- `/` home, with featured pieces, new arrivals, and bestsellers from the database
+- `/shop` catalog, category and price filters, sort, and search
+- `/product/[slug]` product detail, photo gallery, and related pieces
 - `/cart` bag and place-order form
-- `/order/[code]` confirmation (status starts as **new**)
-- `/admin` password-protected staff area: products and orders
+- `/order/[code]` confirmation and status timeline
+- `/track` look up an order by its code
+- `/admin` password-protected staff area: dashboard, products, categories, orders, and shop settings
+
+The pink announcement bar, homepage title, WhatsApp number, delivery charge, and low-stock line are edited in **Admin → Settings**. There is no extra environment variable for those. Leave the WhatsApp number blank until you are ready to publish it. A delivery charge of 0 keeps the old behavior: delivery is confirmed by phone and is not added to the total.
 
 ## Environment variables
 
@@ -73,7 +76,7 @@ DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..." npm run db:seed
 
 8. Open the deployment URL. The shop is public. Staff tools are at `/admin/login`.
 
-Orders are saved with status **new**. Change them to **processing** or **done** from the orders list. Delivery charges stay off the site and are confirmed with the customer, the same way the shop already works.
+Orders are saved with status **new**. Change them to **processing** or **done** from the order page — each change is kept in the status history. Export the current order list as CSV from the orders page. Set a delivery charge in shop settings when you want it added to new orders. Older orders keep the total they were placed with.
 
 ## Stack
 

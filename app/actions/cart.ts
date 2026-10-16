@@ -4,6 +4,19 @@ import { redirect } from "next/navigation";
 import { readCart, writeCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 
+export async function quickAddToCart(productId: string): Promise<{ ok: boolean; error?: string }> {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) return { ok: false, error: "That piece is no longer listed." };
+  if (!product.available || product.stock <= 0) return { ok: false, error: "Sold out." };
+
+  const cart = await readCart();
+  const nextQty = Math.min(product.stock, Math.min(10, (cart[product.id] ?? 0) + 1));
+  if (nextQty <= 0) return { ok: false, error: "Sold out." };
+  cart[product.id] = nextQty;
+  await writeCart(cart);
+  return { ok: true };
+}
+
 export async function addToCart(formData: FormData) {
   const id = String(formData.get("productId") || "");
   const requested = Math.min(10, Math.max(1, Math.floor(Number(formData.get("qty") || 1))));

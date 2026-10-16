@@ -11,6 +11,7 @@ model Category {
   id        String    @id @default(cuid())
   name      String
   slug      String    @unique
+  sortOrder Int       @default(0) @map("sort_order")
   products  Product[]
   createdAt DateTime  @default(now()) @map("created_at")
 
@@ -18,38 +19,68 @@ model Category {
 }
 
 model Product {
-  id          String      @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
-  slug        String      @unique
-  description String      @db.Text
-  price       Decimal     @db.Decimal(10, 2)
-  stock       Int         @default(0)
-  available   Boolean     @default(true)
-  featured    Boolean     @default(false)
-  imageUrl    String      @map("image_url") @db.Text
-  categoryId  String      @map("category_id")
-  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  slug        String         @unique
+  description String         @db.Text
+  price       Decimal        @db.Decimal(10, 2)
+  stock       Int            @default(0)
+  available   Boolean        @default(true)
+  featured    Boolean        @default(false)
+  bestseller  Boolean        @default(false)
+  imageUrl    String         @map("image_url") @db.Text
+  categoryId  String         @map("category_id")
+  category    Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images      ProductImage[]
   orderItems  OrderItem[]
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
   @@index([categoryId])
+  @@index([createdAt])
   @@map("products")
 }
 
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String   @db.Text
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
+model ShopSetting {
+  id                String   @id @default("shop")
+  announcement      String   @db.Text
+  heroTitle         String   @map("hero_title")
+  heroSubtitle      String   @db.Text @map("hero_subtitle")
+  contactPhone      String   @default("") @map("contact_phone")
+  deliveryCharge    Decimal  @default(0) @db.Decimal(10, 2) @map("delivery_charge")
+  lowStockThreshold Int      @default(3) @map("low_stock_threshold")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("shop_settings")
+}
+
 model Order {
-  id           String      @id @default(cuid())
-  code         String      @unique
-  customerName String      @map("customer_name")
-  phone        String
-  address      String      @db.Text
-  area         String
-  note         String?     @db.Text
-  status       OrderStatus @default(NEW)
-  total        Decimal     @db.Decimal(10, 2)
-  items        OrderItem[]
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  id             String             @id @default(cuid())
+  code           String             @unique
+  customerName   String             @map("customer_name")
+  phone          String
+  address        String             @db.Text
+  area           String
+  note           String?            @db.Text
+  status         OrderStatus        @default(NEW)
+  total          Decimal            @db.Decimal(10, 2)
+  deliveryCharge Decimal            @default(0) @db.Decimal(10, 2) @map("delivery_charge")
+  items          OrderItem[]
+  events         OrderStatusEvent[]
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   @@index([status, createdAt])
   @@map("orders")
@@ -67,6 +98,19 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+model OrderStatusEvent {
+  id         String       @id @default(cuid())
+  orderId    String       @map("order_id")
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  note       String?      @db.Text
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("order_status_events")
 }
 
 enum OrderStatus {

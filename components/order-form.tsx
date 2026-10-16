@@ -60,7 +60,7 @@ export function OrderForm() {
       <button type="submit" className={`${btnPrimary} w-full`} disabled={pending}>
         {pending ? "Placing order…" : "Place order"}
       </button>
-      <p className="text-sm text-muted">No online payment. Pay the courier when it arrives.</p>
+      <p className="text-sm text-muted">No online payment. Pay the courier the total above when it arrives.</p>
     </form>
   );
 }

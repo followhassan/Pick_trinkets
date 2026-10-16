@@ -3,9 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
 import { ProductCard } from "@/components/product-card";
+import { ProductGallery } from "@/components/product-gallery";
+import { galleryUrls } from "@/lib/catalog";
 import { canBuy, formatBdt } from "@/lib/format";
-import { site } from "@/lib/site";
 import { prisma } from "@/lib/prisma";
+import { getShopSettings } from "@/lib/settings";
+import { site } from "@/lib/site";
+import { whatsappHref } from "@/lib/whatsapp";
 import { btnPrimary, inputClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -41,40 +45,41 @@ export default async function ProductPage({
   const { error } = await searchParams;
   const product = await prisma.product.findUnique({
     where: { slug },
-    include: { category: true },
+    include: { category: true, images: { orderBy: { sortOrder: "asc" } } },
   });
   if (!product) notFound();
 
-  const related = await prisma.product.findMany({
-    where: { categoryId: product.categoryId, NOT: { id: product.id } },
-    orderBy: { title: "asc" },
-    take: 4,
-  });
+  const [related, settings] = await Promise.all([
+    prisma.product.findMany({
+      where: { categoryId: product.categoryId, NOT: { id: product.id } },
+      orderBy: [{ bestseller: "desc" }, { createdAt: "desc" }],
+      take: 4,
+    }),
+    getShopSettings(),
+  ]);
 
   const soldOut = !canBuy(product);
+  const whatsapp = whatsappHref(
+    settings.contactPhone,
+    `Hi Pick Trinkets! Is ${product.title} available?`,
+  );
 
   return (
     <div>
       <article className="grid items-start gap-8 md:grid-cols-2 md:gap-14">
-        <div className="relative overflow-hidden rounded-3xl bg-white">
-          <img
-            src={product.imageUrl}
-            alt={product.title}
-            className="aspect-square w-full object-cover"
-          />
-          {soldOut ? (
-            <span className="absolute left-4 top-4 rounded-full bg-ink px-3 py-1 text-sm font-bold text-white">
-              Sold out
-            </span>
-          ) : null}
-        </div>
+        <ProductGallery images={galleryUrls(product)} title={product.title} soldOut={soldOut} />
 
-        <div>
+        <div className="animate-rise">
           <Link href={`/shop?category=${product.category.slug}`} className="text-sm font-bold">
             {product.category.name}
           </Link>
           <h1 className="mt-2 font-serif text-4xl leading-tight">{product.title}</h1>
           <p className="mt-3 text-lg">{formatBdt(product.price)}</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+            {product.bestseller ? <span className="rounded-full bg-pink px-2.5 py-1">Bestseller</span> : null}
+            {product.featured ? <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-black/10">Featured</span> : null}
+            <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-black/10">Cash on delivery</span>
+          </div>
           <p className="mt-5 whitespace-pre-wrap leading-relaxed text-muted">{product.description}</p>
 
           {error === "soldout" ? (
@@ -84,16 +89,18 @@ export default async function ProductPage({
           ) : null}
 
           {soldOut ? (
-            <div className="mt-6">
+            <div className="mt-6 rounded-3xl bg-white p-5 ring-1 ring-black/5">
               <p className="text-sm">Sold out for now. Custom versions are still open.</p>
-              <a
-                href={site.instagram}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-block text-sm font-bold"
-              >
-                Message on Instagram
-              </a>
+              <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold">
+                <a href={site.instagram} target="_blank" rel="noreferrer">
+                  Message on Instagram
+                </a>
+                {whatsapp ? (
+                  <a href={whatsapp} target="_blank" rel="noreferrer">
+                    WhatsApp us
+                  </a>
+                ) : null}
+              </div>
             </div>
           ) : (
             <form action={addToCart} className="mt-6 flex flex-wrap items-end gap-3">
@@ -113,7 +120,8 @@ export default async function ProductPage({
                 Add to bag
               </button>
               <p className="w-full text-sm text-muted">
-                {product.stock} in stock · Cash on delivery
+                {product.stock} in stock
+                {product.stock <= settings.lowStockThreshold ? " · going fast" : ""} · Prices in BDT
               </p>
             </form>
           )}
@@ -125,7 +133,7 @@ export default async function ProductPage({
           <h2 className="font-serif text-2xl">More {product.category.name.toLowerCase()}</h2>
           <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4">
             {related.map((item) => (
-              <ProductCard key={item.id} product={item} />
+              <ProductCard key={item.id} product={item} lowStockAt={settings.lowStockThreshold} />
             ))}
           </div>
         </section>

@@ -18,6 +18,7 @@ export function SiteFooter() {
           <Link href="/shop?category=phone-charms">Phone charms</Link>
           <Link href="/shop?category=bag-charms">Bag charms</Link>
           <Link href="/shop?category=bracelets">Bracelets</Link>
+          <Link href="/track">Track an order</Link>
         </div>
         <div className="flex flex-col gap-2 text-sm font-semibold">
           <p className="font-serif text-lg font-normal">Visit</p>
@@ -31,7 +32,7 @@ export function SiteFooter() {
           <p className="font-normal text-muted">{site.location}</p>
         </div>
       </div>
-      <p className="px-5 pb-8 text-center text-xs text-muted">
+      <p className="px-5 pb-24 text-center text-xs text-muted">
         © {new Date().getFullYear()} Pick Trinkets ·{" "}
         <Link href="/admin/login" className="underline">
           Staff
