@@ -25,6 +25,9 @@ async function main() {
   );
 
   if (order.status !== "NEW") throw new Error(`Expected NEW, got ${order.status}`);
+  if (Number(order.deliveryCharge) < 0) throw new Error("Delivery charge should not be negative");
+  const events = await prisma.orderStatusEvent.count({ where: { orderId: order.id } });
+  if (events < 1) throw new Error("Order was saved without a status history");
   const updated = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
   if (updated.stock !== before - 1) throw new Error("Stock was not decremented");
 

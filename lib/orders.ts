@@ -77,10 +77,13 @@ export async function createOrder(input: OrderInput, cart: CartMap) {
       code = makeCode();
     }
 
-    const total = lines.reduce(
+    const subtotal = lines.reduce(
       (sum, line) => sum + Number(line.product.price) * line.quantity,
       0,
     );
+    const settings = await tx.shopSetting.findUnique({ where: { id: "shop" } });
+    const deliveryCharge = Math.max(0, Number(settings?.deliveryCharge ?? 0));
+    const total = subtotal + deliveryCharge;
 
     const order = await tx.order.create({
       data: {
@@ -92,6 +95,7 @@ export async function createOrder(input: OrderInput, cart: CartMap) {
         note: input.note.trim() || null,
         status: "NEW",
         total,
+        deliveryCharge,
         items: {
           create: lines.map((line) => ({
             productId: line.product.id,
@@ -99,6 +103,9 @@ export async function createOrder(input: OrderInput, cart: CartMap) {
             unitPrice: line.product.price,
             quantity: line.quantity,
           })),
+        },
+        events: {
+          create: { toStatus: "NEW" },
         },
       },
     });

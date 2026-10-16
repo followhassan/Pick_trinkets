@@ -182,12 +182,20 @@ const products: Array<{
   },
 ];
 
+const bestsellerSlugs = new Set([
+  "pink-headphone-charm",
+  "berry-pearl-bag-charm",
+  "pearl-bow-bracelet",
+  "flower-bead-bracelets",
+  "cherry-pearl-bracelet",
+]);
+
 async function main() {
-  for (const category of categories) {
+  for (const [index, category] of categories.entries()) {
     await prisma.category.upsert({
       where: { slug: category.slug },
       update: { name: category.name },
-      create: category,
+      create: { ...category, sortOrder: index },
     });
   }
 
@@ -209,12 +217,35 @@ async function main() {
         price: product.price,
         stock: product.stock,
         featured: product.featured,
+        bestseller: bestsellerSlugs.has(product.slug),
         available: true,
         imageUrl: `/products/${product.image}`,
         categoryId,
+        ...(product.slug === "berry-pearl-bag-charm"
+          ? {
+              images: {
+                create: { url: "/products/berry-pearl-detail.jpg", sortOrder: 0 },
+              },
+            }
+          : {}),
       },
     });
   }
+
+  await prisma.shopSetting.upsert({
+    where: { id: "shop" },
+    update: {},
+    create: {
+      id: "shop",
+      announcement: "Handmade in Dhaka · Cash on delivery · No online payment",
+      heroTitle: "Cute handmade accessories",
+      heroSubtitle:
+        "Phone charms, bag charms, and bracelets from Dhaka. Place an order here — we confirm by phone, then send it cash on delivery.",
+      contactPhone: "",
+      deliveryCharge: 0,
+      lowStockThreshold: 3,
+    },
+  });
 
   console.log(`Seeded ${categories.length} categories and ${products.length} products.`);
 }

@@ -4,6 +4,7 @@ import { OrderForm } from "@/components/order-form";
 import { formatBdt } from "@/lib/format";
 import { readCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
+import { getShopSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function CartPage({
   searchParams: Promise<{ added?: string }>;
 }) {
   const { added } = await searchParams;
-  const cart = await readCart();
+  const [cart, settings] = await Promise.all([readCart(), getShopSettings()]);
   const ids = Object.keys(cart);
   const products = ids.length
     ? await prisma.product.findMany({ where: { id: { in: ids } } })
@@ -32,6 +33,8 @@ export default async function CartPage({
     if (!line.product) return sum;
     return sum + Number(line.product.price) * line.qty;
   }, 0);
+  const delivery = subtotal > 0 ? settings.deliveryCharge : 0;
+  const total = subtotal + delivery;
 
   return (
     <div>
@@ -118,11 +121,22 @@ export default async function CartPage({
             ))}
           </ul>
 
-          <aside className="rounded-3xl bg-white p-5">
-            <div className="mb-5 flex items-baseline justify-between">
-              <h2 className="font-serif text-2xl">Your details</h2>
-              <p className="font-bold">{formatBdt(subtotal)}</p>
-            </div>
+          <aside className="rounded-3xl bg-white p-5 ring-1 ring-black/5">
+            <h2 className="font-serif text-2xl">Your details</h2>
+            <dl className="my-4 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <dt>Pieces</dt>
+                <dd>{formatBdt(subtotal)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Delivery</dt>
+                <dd>{delivery > 0 ? formatBdt(delivery) : "Confirmed by phone"}</dd>
+              </div>
+              <div className="flex justify-between border-t border-black/10 pt-2 font-bold">
+                <dt>Total</dt>
+                <dd>{formatBdt(total)}</dd>
+              </div>
+            </dl>
             <OrderForm />
           </aside>
         </div>

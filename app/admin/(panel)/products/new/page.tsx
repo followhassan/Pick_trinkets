@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "New product" };
 
 export default async function NewProductPage() {
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const categories = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
 
   return (
     <div>

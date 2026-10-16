@@ -12,8 +12,10 @@ type ProductDefaults = {
   stock: number;
   available: boolean;
   featured: boolean;
+  bestseller: boolean;
   imageUrl: string;
   categoryName: string;
+  images: Array<{ id: string; url: string }>;
 };
 
 const initial: ProductFormState = {};
@@ -57,6 +59,35 @@ export function ProductForm({
         {preview ? (
           <img src={preview} alt="" className="h-40 w-40 rounded-2xl object-cover" />
         ) : null}
+
+        {product && product.images.length > 0 ? (
+          <fieldset>
+            <legend className={labelClass}>Extra photos</legend>
+            <div className="grid grid-cols-3 gap-3">
+              {product.images.map((image) => (
+                <label key={image.id} className="block text-xs font-semibold">
+                  <img src={image.url} alt="" className="mb-1 aspect-square w-full rounded-xl object-cover" />
+                  <span className="flex items-center gap-1">
+                    <input type="checkbox" name="removeImage" value={image.id} className="accent-pink-deep" />
+                    Remove
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+
+        <label className="block">
+          <span className={labelClass}>More photos</span>
+          <input
+            name="extraImages"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className={`${inputClass} bg-white file:mr-3 file:rounded-full file:border-0 file:bg-cream file:px-3 file:py-1 file:text-sm file:font-bold`}
+          />
+          <span className="mt-1 block text-xs text-muted">Up to 5 extra photos. The first photo above stays the cover.</span>
+        </label>
 
         <label className="block">
           <span className={labelClass}>Title</span>
@@ -140,7 +171,16 @@ export function ProductForm({
             defaultChecked={product?.featured ?? false}
             className="h-4 w-4 accent-pink-deep"
           />
-          Show on the home page
+          Show in Featured
+        </label>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            name="bestseller"
+            defaultChecked={product?.bestseller ?? false}
+            className="h-4 w-4 accent-pink-deep"
+          />
+          Mark as bestseller
         </label>
 
         <button type="submit" className={btnPrimary} disabled={pending}>

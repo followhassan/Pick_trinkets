@@ -44,8 +44,9 @@ async function upsertProduct(formData: FormData) {
 
   let category = await prisma.category.findUnique({ where: { slug: categorySlug } });
   if (!category) {
+    const last = await prisma.category.findFirst({ orderBy: { sortOrder: "desc" } });
     category = await prisma.category.create({
-      data: { name: categoryName, slug: categorySlug },
+      data: { name: categoryName, slug: categorySlug, sortOrder: (last?.sortOrder ?? -1) + 1 },
     });
   }
 
@@ -69,17 +70,42 @@ async function upsertProduct(formData: FormData) {
     stock,
     available: checked(formData, "available"),
     featured: checked(formData, "featured"),
+    bestseller: checked(formData, "bestseller"),
     imageUrl,
     categoryId: category.id,
   };
 
-  if (existing) {
-    await prisma.product.update({ where: { id: existing.id }, data });
-    return existing.slug;
+  const saved = existing
+    ? await prisma.product.update({ where: { id: existing.id }, data })
+    : await prisma.product.create({ data });
+
+  const removeIds = formData
+    .getAll("removeImage")
+    .map((value) => String(value))
+    .filter(Boolean);
+  if (removeIds.length > 0) {
+    await prisma.productImage.deleteMany({
+      where: { productId: saved.id, id: { in: removeIds } },
+    });
   }
 
-  const created = await prisma.product.create({ data });
-  return created.slug;
+  const extraFiles = formData
+    .getAll("extraImages")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+  if (extraFiles.length > 0) {
+    const remaining = await prisma.productImage.count({ where: { productId: saved.id } });
+    if (remaining + extraFiles.length > 5) {
+      throw new ProductFormError("Keep extra photos to 5. Remove one before adding more.");
+    }
+    for (const [index, file] of extraFiles.entries()) {
+      const url = await storeProductImage(file);
+      await prisma.productImage.create({
+        data: { productId: saved.id, url, sortOrder: remaining + index },
+      });
+    }
+  }
+
+  return saved.slug;
 }
 
 export async function saveProduct(
@@ -123,15 +149,77 @@ export async function updateOrderStatus(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") || "");
   const status = String(formData.get("status") || "");
+  const note = String(formData.get("note") || "").trim().slice(0, 300);
   if (!id || !["NEW", "PROCESSING", "DONE"].includes(status)) {
     redirect("/admin/orders");
   }
 
-  await prisma.order.update({
-    where: { id },
-    data: { status: status as "NEW" | "PROCESSING" | "DONE" },
-  });
+  const order = await prisma.order.findUnique({ where: { id } });
+  if (!order) redirect("/admin/orders");
+
+  const nextStatus = status as "NEW" | "PROCESSING" | "DONE";
+  if (order.status !== nextStatus || note) {
+    await prisma.$transaction([
+      prisma.order.update({ where: { id }, data: { status: nextStatus } }),
+      prisma.orderStatusEvent.create({
+        data: {
+          orderId: id,
+          fromStatus: order.status,
+          toStatus: nextStatus,
+          note: note || null,
+        },
+      }),
+    ]);
+  }
+
+  revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
+  revalidatePath(`/order/${order.code}`);
+  revalidatePath("/track");
   redirect(`/admin/orders/${id}`);
+}
+
+export async function updateStock(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") || "");
+  const stock = Math.floor(Number(formData.get("stock")));
+  if (!id || !Number.isFinite(stock) || stock < 0 || stock > 9999) return;
+
+  await prisma.product.update({ where: { id }, data: { stock } });
+  revalidatePath("/");
+  revalidatePath("/shop");
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
+}
+
+export async function bulkUpdateProducts(formData: FormData) {
+  await requireAdmin();
+  const ids = formData.getAll("ids").map((value) => String(value)).filter(Boolean);
+  const action = String(formData.get("bulk") || "");
+  if (ids.length === 0) return;
+
+  const where = { id: { in: ids } };
+  if (action === "delete") {
+    await prisma.product.deleteMany({ where });
+  } else if (action === "feature") {
+    await prisma.product.updateMany({ where, data: { featured: true } });
+  } else if (action === "unfeature") {
+    await prisma.product.updateMany({ where, data: { featured: false } });
+  } else if (action === "bestseller") {
+    await prisma.product.updateMany({ where, data: { bestseller: true } });
+  } else if (action === "unbestseller") {
+    await prisma.product.updateMany({ where, data: { bestseller: false } });
+  } else if (action === "available") {
+    await prisma.product.updateMany({ where, data: { available: true } });
+  } else if (action === "unavailable") {
+    await prisma.product.updateMany({ where, data: { available: false } });
+  } else {
+    return;
+  }
+
+  revalidatePath("/");
+  revalidatePath("/shop");
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
 }
